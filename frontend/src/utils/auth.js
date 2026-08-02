@@ -1,5 +1,5 @@
-const TOKEN_KEY = 'chronicleTableToken';
-const USER_KEY = 'chronicleTableUser';
+const SYSTEM_KEY = 'chronicleTableSystem';
+const LEGACY_AUTH_KEYS = ['chronicleTableToken', 'chronicleTableUser'];
 
 function safelyRead(storage, key) {
   try {
@@ -9,60 +9,28 @@ function safelyRead(storage, key) {
   }
 }
 
-function clearStorage(storage) {
+export function saveSelectedSystem(systemId) {
   try {
-    storage.removeItem(TOKEN_KEY);
-    storage.removeItem(USER_KEY);
+    localStorage.setItem(SYSTEM_KEY, systemId);
   } catch {
-    // A aplicação continua utilizável quando o navegador bloqueia o storage.
+    throw new Error('Não foi possível salvar o sistema selecionado.');
   }
 }
 
-export function saveAuth({ token, user }, remember) {
-  clearAuth();
-  const storage = remember ? localStorage : sessionStorage;
+export function getSelectedSystem() {
+  return safelyRead(localStorage, SYSTEM_KEY);
+}
 
+export function clearLocalSessionData() {
   try {
-    // Provisório: tokens não devem permanecer em Web Storage na autenticação final.
-    storage.setItem(TOKEN_KEY, token);
-    storage.setItem(USER_KEY, JSON.stringify(user));
+    localStorage.removeItem(SYSTEM_KEY);
+    sessionStorage.removeItem(SYSTEM_KEY);
+
+    LEGACY_AUTH_KEYS.forEach((key) => {
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+    });
   } catch {
-    throw new Error(
-      'Não foi possível salvar sua sessão. Verifique as permissões do navegador.',
-    );
+    // O encerramento da sessão do Supabase continua sendo a fonte principal.
   }
 }
-
-export function getToken() {
-  return (
-    safelyRead(localStorage, TOKEN_KEY) ??
-    safelyRead(sessionStorage, TOKEN_KEY)
-  );
-}
-
-export function getUser() {
-  const rawUser =
-    safelyRead(localStorage, USER_KEY) ??
-    safelyRead(sessionStorage, USER_KEY);
-
-  if (!rawUser) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(rawUser);
-  } catch {
-    clearAuth();
-    return null;
-  }
-}
-
-export function isAuthenticated() {
-  return Boolean(getToken());
-}
-
-export function clearAuth() {
-  clearStorage(localStorage);
-  clearStorage(sessionStorage);
-}
-

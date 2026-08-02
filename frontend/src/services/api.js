@@ -1,6 +1,4 @@
-const API_URL = (
-  import.meta.env.VITE_API_URL ?? 'http://localhost:3001/api'
-).replace(/\/$/, '');
+const API_URL = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/$/, '');
 
 export class ApiError extends Error {
   constructor(message, { status = 0, type = 'api' } = {}) {
@@ -59,4 +57,3 @@ export function login(email, password) {
     body: JSON.stringify({ email, password }),
   });
 }
-
