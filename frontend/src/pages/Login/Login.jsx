@@ -3,12 +3,15 @@ import { Check, Eye, EyeOff, Flame, ScrollText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../../components/Button/Button.jsx';
 import Input from '../../components/Input/Input.jsx';
+import { useAuth } from '../../contexts/AuthContext.jsx';
 import { setAuthPersistence, supabase } from '../../lib/supabase.js';
 import { validateLogin } from '../../utils/validation.js';
 
 const initialValues = {
-  email: '',
-  password: '',
+  email: import.meta.env.DEV ? import.meta.env.VITE_DEV_ACCOUNT_EMAIL || '' : '',
+  password: import.meta.env.DEV
+    ? import.meta.env.VITE_DEV_ACCOUNT_PASSWORD || ''
+    : '',
   remember: false,
 };
 
@@ -38,6 +41,7 @@ function getAuthErrorMessage(error, mode) {
 
 function Login() {
   const navigate = useNavigate();
+  const { signInDev } = useAuth();
   const [authMode, setAuthMode] = useState('login');
   const [values, setValues] = useState(initialValues);
   const [errors, setErrors] = useState({});
@@ -88,6 +92,14 @@ function Login() {
     setStatus(null);
 
     try {
+      if (
+        authMode === 'login' &&
+        signInDev(values.email, values.password, values.remember)
+      ) {
+        navigate('/systems', { replace: true });
+        return;
+      }
+
       setAuthPersistence(values.remember);
 
       if (authMode === 'signup') {

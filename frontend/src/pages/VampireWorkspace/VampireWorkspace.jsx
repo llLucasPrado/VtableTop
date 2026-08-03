@@ -22,6 +22,7 @@ function VampireWorkspace() {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const [activeTab, setActiveTab] = useState('sheet');
+  const [characterHunger, setCharacterHunger] = useState(1);
 
   async function handleLogout() {
     await signOut();
@@ -106,6 +107,7 @@ function VampireWorkspace() {
             <nav
               className="relative flex rounded-xl border border-neutral-900 bg-black/40 p-1.5"
               aria-label="Seções de Vampiro"
+              role="tablist"
             >
               {workspaceTabs.map(({ id, label, icon: Icon }) => {
                 const isActive = activeTab === id;
@@ -115,7 +117,9 @@ function VampireWorkspace() {
                     key={id}
                     type="button"
                     onClick={() => setActiveTab(id)}
-                    aria-current={isActive ? 'page' : undefined}
+                    aria-controls={`vampire-${id}-panel`}
+                    aria-selected={isActive}
+                    role="tab"
                     className={`relative inline-flex min-h-10 flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg px-5 py-2 text-sm font-semibold transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 lg:flex-none ${
                       isActive
                         ? 'bg-gradient-to-b from-red-800 to-red-950 text-white shadow-[0_7px_20px_rgba(127,29,29,0.3)]'
@@ -134,7 +138,20 @@ function VampireWorkspace() {
           </div>
         </section>
 
-        {activeTab === 'sheet' ? <CharacterSheet /> : <DiceRoller />}
+        <div
+          id="vampire-sheet-panel"
+          role="tabpanel"
+          hidden={activeTab !== 'sheet'}
+        >
+          <CharacterSheet onHungerChange={setCharacterHunger} />
+        </div>
+        <div
+          id="vampire-dice-panel"
+          role="tabpanel"
+          hidden={activeTab !== 'dice'}
+        >
+          <DiceRoller hunger={characterHunger} />
+        </div>
 
         <footer className="mx-auto mt-8 max-w-3xl border-t border-neutral-900 px-4 py-6 text-center text-[0.65rem] leading-5 text-neutral-700">
           Material de fã não oficial. Divirta-se durante a jogatina !

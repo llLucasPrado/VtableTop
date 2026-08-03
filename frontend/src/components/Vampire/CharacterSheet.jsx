@@ -56,8 +56,9 @@ function mergeCharacter(draft) {
   };
 }
 
-function CharacterSheet() {
+function CharacterSheet({ onHungerChange }) {
   const { user } = useAuth();
+  const isLocalDevUser = user?.app_metadata?.provider === 'development';
   const [character, setCharacter] = useState(() =>
     mergeCharacter(loadVampireDraft(user?.id)),
   );
@@ -79,6 +80,10 @@ function CharacterSheet() {
   );
 
   useEffect(() => {
+    onHungerChange?.(character.hunger ?? 0);
+  }, [character.hunger, onHungerChange]);
+
+  useEffect(() => {
     if (!user?.id) {
       return undefined;
     }
@@ -87,6 +92,14 @@ function CharacterSheet() {
 
     async function hydrateCharacter() {
       setSaveStatus('loading');
+
+      if (isLocalDevUser) {
+        setCharacter(mergeCharacter(loadVampireDraft(user.id)));
+        setCharacterId(createCharacterId());
+        setSaveStatus('local');
+        setIsHydrated(true);
+        return;
+      }
 
       try {
         const remoteCharacter = await loadLatestCharacter(user.id, 'vampire-v5');
@@ -123,7 +136,7 @@ function CharacterSheet() {
     return () => {
       ignore = true;
     };
-  }, [user?.id]);
+  }, [isLocalDevUser, user?.id]);
 
   useEffect(() => {
     if (!isHydrated || !characterId || !user?.id) {
@@ -132,6 +145,12 @@ function CharacterSheet() {
 
     const version = ++saveVersion.current;
     saveVampireDraft(user.id, character);
+
+    if (isLocalDevUser) {
+      setSaveStatus('local');
+      return undefined;
+    }
+
     setSaveStatus('saving');
 
     const timeout = window.setTimeout(() => {
@@ -160,7 +179,7 @@ function CharacterSheet() {
     }, 650);
 
     return () => window.clearTimeout(timeout);
-  }, [character, characterId, isHydrated, user?.id]);
+  }, [character, characterId, isHydrated, isLocalDevUser, user?.id]);
 
   function updateIdentity(event) {
     const { name, value } = event.target;
@@ -519,6 +538,11 @@ function SaveIndicator({ status }) {
       icon: Check,
       text: 'Salvo na nuvem',
       classes: 'border-emerald-950/70 text-emerald-600',
+    },
+    local: {
+      icon: Check,
+      text: 'Salvo neste dispositivo',
+      classes: 'border-blue-950/70 text-blue-500',
     },
     error: {
       icon: Activity,

@@ -11,10 +11,10 @@ function prefersReducedMotion() {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 }
 
-function DiceRoller() {
+function DiceRoller({ hunger = 0 }) {
   const [pool, setPool] = useState(5);
-  const [hunger, setHunger] = useState(1);
   const [difficulty, setDifficulty] = useState(1);
+  const [rollWithoutHunger, setRollWithoutHunger] = useState(false);
   const [result, setResult] = useState(null);
   const [isRolling, setIsRolling] = useState(false);
   const rollTimer = useRef(null);
@@ -26,8 +26,9 @@ function DiceRoller() {
     [],
   );
 
-  const normalDice = Math.max(pool - Math.min(hunger, pool), 0);
-  const hungerDice = Math.min(hunger, pool);
+  const appliedHunger = rollWithoutHunger ? 0 : hunger;
+  const normalDice = Math.max(pool - Math.min(appliedHunger, pool), 0);
+  const hungerDice = Math.min(appliedHunger, pool);
 
   const outcome = useMemo(() => {
     if (!result) {
@@ -38,17 +39,7 @@ function DiceRoller() {
   }, [difficulty, result]);
 
   function adjustPool(change) {
-    setPool((current) => {
-      const nextPool = Math.min(20, Math.max(1, current + change));
-      setHunger((currentHunger) => Math.min(currentHunger, nextPool));
-      return nextPool;
-    });
-  }
-
-  function adjustHunger(change) {
-    setHunger((current) =>
-      Math.min(Math.min(5, pool), Math.max(0, current + change)),
-    );
+    setPool((current) => Math.min(20, Math.max(1, current + change)));
   }
 
   function handleRoll() {
@@ -110,9 +101,14 @@ function DiceRoller() {
           <Counter
             label="Fome"
             value={hunger}
-            onDecrease={() => adjustHunger(-1)}
-            onIncrease={() => adjustHunger(1)}
-            detail={`${hungerDice} vermelhos`}
+            detail={
+              rollWithoutHunger
+                ? 'ignorada nesta rolagem'
+                : hunger > pool
+                  ? `${hungerDice} vermelhos · limite da parada`
+                  : `${hungerDice} vermelhos · valor da ficha`
+            }
+            source="Ficha"
             accent
           />
           <Counter
@@ -123,6 +119,29 @@ function DiceRoller() {
             detail="sucessos necessários"
           />
         </div>
+
+        <label className="group relative mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-neutral-900 bg-black/25 px-4 py-3 transition duration-200 hover:border-neutral-800 hover:bg-black/40">
+          <input
+            type="checkbox"
+            checked={rollWithoutHunger}
+            onChange={(event) => setRollWithoutHunger(event.target.checked)}
+            className="peer sr-only"
+          />
+          <span
+            aria-hidden="true"
+            className="mt-0.5 flex h-5 w-9 shrink-0 rounded-full border border-neutral-700 bg-neutral-900 p-0.5 transition peer-checked:border-red-800 peer-checked:bg-red-950 peer-checked:[&>span]:translate-x-4 peer-checked:[&>span]:bg-red-400 peer-focus-visible:ring-2 peer-focus-visible:ring-red-600 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-[#0b0b0c]"
+          >
+            <span className="size-3.5 rounded-full bg-neutral-500 shadow-sm transition duration-200" />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-sm font-medium text-neutral-300 transition group-hover:text-neutral-100">
+              Rolagem especial sem Dados de Fome
+            </span>
+            <span className="mt-0.5 block text-xs leading-5 text-neutral-600">
+              Ative apenas quando a regra da rolagem mandar ignorar a Fome.
+            </span>
+          </span>
+        </label>
 
         <button
           type="button"
@@ -210,8 +229,11 @@ function Counter({
   onDecrease,
   onIncrease,
   detail,
+  source,
   accent = false,
 }) {
+  const isAdjustable = Boolean(onDecrease && onIncrease);
+
   return (
     <div
       className={`rounded-xl border p-4 transition duration-200 hover:-translate-y-0.5 ${
@@ -220,21 +242,34 @@ function Counter({
           : 'border-neutral-800 bg-neutral-950/65 hover:border-neutral-700'
       }`}
     >
-      <p className="text-xs font-semibold uppercase tracking-[0.15em] text-neutral-500">
-        {label}
-      </p>
-      <div className="mt-3 flex items-center justify-between gap-3">
-        <ControlButton label={`Diminuir ${label}`} onClick={onDecrease}>
-          <Minus className="size-4" />
-        </ControlButton>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.15em] text-neutral-500">
+          {label}
+        </p>
+        {source && (
+          <span className="rounded-full border border-red-950/80 bg-red-950/25 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-red-500">
+            {source}
+          </span>
+        )}
+      </div>
+      <div
+        className={`mt-3 flex items-center gap-3 ${isAdjustable ? 'justify-between' : 'justify-center'}`}
+      >
+        {isAdjustable && (
+          <ControlButton label={`Diminuir ${label}`} onClick={onDecrease}>
+            <Minus className="size-4" />
+          </ControlButton>
+        )}
         <span
           className={`font-serif text-3xl font-bold ${accent ? 'text-red-400' : 'text-neutral-100'}`}
         >
           {value}
         </span>
-        <ControlButton label={`Aumentar ${label}`} onClick={onIncrease}>
-          <Plus className="size-4" />
-        </ControlButton>
+        {isAdjustable && (
+          <ControlButton label={`Aumentar ${label}`} onClick={onIncrease}>
+            <Plus className="size-4" />
+          </ControlButton>
+        )}
       </div>
       <p className="mt-2 text-center text-[0.65rem] text-neutral-600">{detail}</p>
     </div>
